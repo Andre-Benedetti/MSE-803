@@ -1,54 +1,63 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 def perform_analysis(file_path):
-    # 1. Load the dataset
+    """
+    Loads an Excel file, performs data aggregation to uncover the 
+    underlying business story, and exports a visual summary.
+    """
     try:
+        # Load the Excel dataset
         df = pd.read_excel(file_path)
-        df.columns = df.columns.str.strip().str.lower()
+        print("Dataset successfully loaded!")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error loading the file: {e}")
         return
 
-    # 2. Group and Aggregate 
-    story_data = df.groupby('category').agg(
-        Sales_Sum=('sales_sum', 'sum'),
-        Sales_Mean=('sales_mean', 'mean'),
-        Sales_Count=('sales_count', 'sum'),
-        Quantity_Sum=('quantity_sum', 'sum'),
-        Quantity_Mean=('quantity_mean', 'mean')
-    ).round(2)
+    story_data = df.groupby('Category').agg({
+        'Sales': 'sum',
+        'Profit': 'sum'
+    }).sort_values(by='Sales', ascending=False)
 
-    # Rename for display
-    story_data.columns = ['Sales Sum', 'Sales Mean', 'Sales Count', 'Quantity Sum', 'Quantity Mean']
-    story_data.index.name = 'Category'
+    print("\n--- Aggregation Summary (The Data Story) ---")
+    print(story_data)
 
-    # 3. Create the Table Image (Final Outcome)
-    fig, ax = plt.subplots(figsize=(10, 2)) # Adjust size to fit the table
-    ax.axis('off') # Hide axes
-
-    # Create the table object
-    the_table = ax.table(
-        cellText=story_data.values, 
-        colLabels=story_data.columns, 
-        rowLabels=story_data.index,
-        loc='center',
-        cellLoc='center'
+    # Visualization: Creating the final outcome screenshot
+    plt.figure(figsize=(12, 6))
+    sns.set_theme(style="whitegrid")
+    
+    # Primary axis: Bar plot for Total Sales
+    ax = sns.barplot(
+        x=story_data.index, 
+        y=story_data['Sales'], 
+        palette='viridis', 
+        label='Total Sales'
     )
-
     
-    the_table.auto_set_font_size(False)
-    the_table.set_fontsize(10)
-    the_table.scale(1.2, 1.8) # Adjust scaling for better padding
-
+    # Secondary axis: Line plot for Profitability trends
+    ax2 = ax.twinx()
+    sns.lineplot(
+        x=story_data.index, 
+        y=story_data['Profit'], 
+        marker='o', 
+        color='crimson', 
+        linewidth=2.5, 
+        label='Total Profit', 
+        ax=ax2
+    )
     
-    for (row, col), cell in the_table.get_celld().items():
-        if row == 0 or col == -1:
-            cell.set_text_props(weight='bold')
-
-    # 4. Save the table as the final outcome image
-    plt.savefig('final_outcome.png', bbox_inches='tight', dpi=300)
-    print("Table image saved as 'final_outcome.png'.")
+    # Formatting titles and labels for a professional report look
+    ax.set_title('Business Performance Analysis: Revenue vs. Profitability by Category', fontsize=14)
+    ax.set_xlabel('Product Category', fontsize=12)
+    ax.set_ylabel('Sales Volume ($)', fontsize=12)
+    ax2.set_ylabel('Net Profit ($)', fontsize=12)
+    
+    plt.tight_layout()
+    
+    # Save the result as a screenshot for the GitHub README
+    plt.savefig('final_outcome.png')
+    print("\nAnalysis complete! 'final_outcome.png' has been generated.")
 
 if __name__ == "__main__":
     file_name = 'Data_set_w1A1.xlsx' 
