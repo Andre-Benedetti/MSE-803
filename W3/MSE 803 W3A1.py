@@ -34,7 +34,7 @@ print(f"\n--- Outlier Detection Results ---")
 print(f"Lower Bound: {lower_bound:.2f} | Upper Bound: {upper_bound:.2f}")
 print(f"Total Outliers detected: {len(outliers)}")
 
-# 4. Correlation on cleaned data (optional: use df_normal for a "purer" correlation)
+# 4. Correlation on cleaned data 
 r_coef, p_value = pearsonr(df_clean[col_x], df_clean[col_y])
 
 # 5. Visualization
@@ -55,7 +55,6 @@ plt.title('Age vs Net Worth: Identifying Outliers', fontsize=15)
 plt.xlabel('Age', fontsize=12)
 plt.ylabel('Net Worth', fontsize=12)
 plt.legend()
-
 
 
 # 7. Print the specific outlier values
