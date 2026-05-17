@@ -138,7 +138,7 @@ def execute_sql_queries(df):
         GROUP BY Corruption_Level;
         """
 
-        # Print results for screenshots
+        # Print results
         print("\n[SQL Result 1: GDP Categories & Ranking]")
         res1 = pd.read_sql_query(query_1, conn)
         print(res1)
