@@ -1,3 +1,6 @@
+# ==========================================
+# STEP 1: Import (Import libraries)
+# ==========================================
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -13,22 +16,40 @@ from sklearn.metrics import (
 from sklearn.model_selection import cross_val_score, train_test_split
 from sklearn.svm import SVC
 
-
-# I. Load and Clean Dataset
-
+# ==========================================
+# STEP 2: Load, Clean, and Export Data
+# ==========================================
 iris_built_in = datasets.load_iris()
 
 # Convert the built-in data into a Pandas DataFrame for cleaning
 df = pd.DataFrame(iris_built_in.data, columns=iris_built_in.feature_names)
 
+# Assign the numeric targets first so it can be mapped and exported properly
+df["species_code"] = iris_built_in.target
+
 # Map the target numbers (0, 1, 2) to actual text species names
 species_names = [iris_built_in.target_names[i] for i in iris_built_in.target]
 df["species"] = species_names
 
-print("--- Data Cleaning Process ---")
-print(f"Original dataset shape: {df.shape}")
+print("--- Data Cleaning & Exploration Process ---")
+print(f"Original dataset shape: {df.shape}\n")
 
-# Dataset Structure Information ---
+# --- Export the Species Mapping Reference File ---
+print("Generating species mapping reference file...")
+# Select only the name and numeric code columns, then keep unique rows
+mapping_df = df[["species", "species_code"]].drop_duplicates().reset_index(drop=True)
+# Rename columns explicitly for the English requirements
+mapping_df.columns = ["Species Name", "Assigned Numeric Value"]
+
+# Get current script directory to save files dynamically in the same folder
+script_dir = os.path.dirname(os.path.abspath(__file__))
+mapping_file_path = os.path.join(script_dir, "species_mapping.csv")
+
+# Export mapping reference to CSV
+mapping_df.to_csv(mapping_file_path, index=False)
+print(f"Success! Mapping file saved to:\n-> {mapping_file_path}\n")
+
+# --- Dataset Structure Information Logging ---
 print("Dataset Structure Details:")
 print(f"Total number of columns: {len(df.columns)}")
 print("-" * 65)
@@ -53,30 +74,52 @@ else:
 df["species"] = df["species"].str.strip()
 
 # 3. Remove duplicate rows to avoid overfitting
-duplicates_count = df.duplicated().sum()
+# Using a specific subset to avoid counting the temporary columns incorrectly
+features_and_target = list(iris_built_in.feature_names) + ["species"]
+duplicates_count = df.duplicated(subset=features_and_target).sum()
 if duplicates_count > 0:
     print(f"Found {duplicates_count} duplicate rows. Removing them...")
-    df.drop_duplicates(inplace=True)
+    df.drop_duplicates(subset=features_and_target, inplace=True)
 
 print(f"Cleaned dataset shape: {df.shape}\n")
 
-# Separate features (X) and target labels (y) from the cleaned 
+# Separate features (X) and target labels (y) from the cleaned DataFrame
 X = df[iris_built_in.feature_names]
 y = df["species"]
+
+# --- Export the Complete Cleaned Dataset with Names and Numerical Codes ---
+print("Exporting complete cleaned dataset with names and numeric codes...")
+exported_df = df.copy()
+
+# Reorder and rename columns for the final clean report delivery
+columns_order = list(iris_built_in.feature_names) + ["species", "species_code"]
+exported_df = exported_df[columns_order]
+exported_df.columns = list(iris_built_in.feature_names) + [
+    "Species Name",
+    "Assigned Numeric Value",
+]
+
+cleaned_dataset_path = os.path.join(
+    script_dir, "iris_cleaned_dataset_with_codes.csv"
+)
+exported_df.to_csv(cleaned_dataset_path, index=False)
+print(f"Success! Cleaned full dataset saved to:\n-> {cleaned_dataset_path}\n")
 
 # Splitting the dataset into 80% for training and 20% for testing
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
 
-# II. Train (Train SVM classifier)
-
+# ==========================================
+# STEP 3: Train (Train SVM classifier)
+# ==========================================
 svm_model = SVC(kernel="linear")
 svm_model.fit(X_train, y_train)
 print("Model training completed successfully!\n")
 
-# III. Predict and Advanced Evaluation
-
+# ==========================================
+# STEP 4: Predict and Advanced Evaluation
+# ==========================================
 # Make predictions on the test set
 predictions = svm_model.predict(X_test)
 
@@ -91,7 +134,6 @@ recall = recall_score(y_test, predictions, average="macro")
 conf_matrix = confusion_matrix(y_test, predictions)
 
 # 4. Cross-Validation for Reliability (using 5 folds on the whole dataset)
-# This checks how stable the model performance is across different data splits
 cv_scores = cross_val_score(svm_model, X, y, cv=5)
 
 # Printing the evaluation metrics to the terminal
@@ -108,10 +150,10 @@ print("-" * 50)
 print("\nDetailed Classification Report:")
 print(classification_report(y_test, predictions))
 
-# IV. Create Plots and Save Figures
-
+# ==========================================
+# STEP 5: Create Plots and Save Figures
+# ==========================================
 print("\nGenerating evaluation graphics...")
-script_dir = os.path.dirname(os.path.abspath(__file__))
 
 # --- Plot 1: Feature Analysis (Sepals vs Petals) ---
 sns.set_theme(style="whitegrid")
@@ -150,7 +192,6 @@ plt.close()
 
 # --- Plot 2: Confusion Matrix Heatmap ---
 plt.figure(figsize=(7, 5))
-# Get unique species names in the order they appear in the confusion matrix
 labels = sorted(df["species"].unique())
 
 sns.heatmap(
