@@ -1,6 +1,4 @@
-# ==========================================
-# STEP 1: Import (Import libraries)
-# ==========================================
+
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -17,7 +15,7 @@ from sklearn.model_selection import cross_val_score, train_test_split
 from sklearn.svm import SVC
 
 # ==========================================
-# STEP 2: Load, Clean, and Export Data
+# I. Load, Clean, and Export Data
 # ==========================================
 iris_built_in = datasets.load_iris()
 
@@ -34,7 +32,7 @@ df["species"] = species_names
 print("--- Data Cleaning & Exploration Process ---")
 print(f"Original dataset shape: {df.shape}\n")
 
-# --- Export the Species Mapping Reference File ---
+# Export the Species Mapping Reference File
 print("Generating species mapping reference file...")
 # Select only the name and numeric code columns, then keep unique rows
 mapping_df = df[["species", "species_code"]].drop_duplicates().reset_index(drop=True)
@@ -49,7 +47,7 @@ mapping_file_path = os.path.join(script_dir, "species_mapping.csv")
 mapping_df.to_csv(mapping_file_path, index=False)
 print(f"Success! Mapping file saved to:\n-> {mapping_file_path}\n")
 
-# --- Dataset Structure Information Logging ---
+# Dataset Structure Information Logging
 print("Dataset Structure Details:")
 print(f"Total number of columns: {len(df.columns)}")
 print("-" * 65)
@@ -87,7 +85,7 @@ print(f"Cleaned dataset shape: {df.shape}\n")
 X = df[iris_built_in.feature_names]
 y = df["species"]
 
-# --- Export the Complete Cleaned Dataset with Names and Numerical Codes ---
+# Export the Complete Cleaned Dataset with Names and Numerical Codes
 print("Exporting complete cleaned dataset with names and numeric codes...")
 exported_df = df.copy()
 
@@ -111,14 +109,14 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 # ==========================================
-# STEP 3: Train (Train SVM classifier)
+# II. Train (Train SVM classifier)
 # ==========================================
 svm_model = SVC(kernel="linear")
 svm_model.fit(X_train, y_train)
 print("Model training completed successfully!\n")
 
 # ==========================================
-# STEP 4: Predict and Advanced Evaluation
+# III. Predict and Advanced Evaluation
 # ==========================================
 # Make predictions on the test set
 predictions = svm_model.predict(X_test)
@@ -151,7 +149,7 @@ print("\nDetailed Classification Report:")
 print(classification_report(y_test, predictions))
 
 # ==========================================
-# STEP 5: Create Plots and Save Figures
+# IV. Create Plots and Save Figures
 # ==========================================
 print("\nGenerating evaluation graphics...")
 
