@@ -7,7 +7,7 @@ df_clean = df.dropna(subset=['Estimate(percent)'])
 # 2. Filter strictly for the target wellbeing measure
 df_sat = df_clean[df_clean['Wellbeing measure'] == 'Overall life satisfaction']
 
-# 3. Filter out 'Mean rating' as requested previously
+# 3. Filter out 'Mean rating'
 df_filtered = df_sat[df_sat['Wellbeing measure category'] != 'Mean rating']
 
 # 4. Enforce strict ascending categorical order starting from '0 to 6' up to '10'
@@ -59,8 +59,8 @@ for demo in demographics:
     print(pivot_table)
     print("\n" + "="*85 + "\n")
 
-    # =====================================================================
-# ADDITION: MULTIDIMENSIONAL INFLUENCE ANALYSIS
+# =====================================================================
+#  MULTIDIMENSIONAL INFLUENCE ANALYSIS
 # =====================================================================
 print("=====================================================================")
 print("--- MULTIDIMENSIONAL INFLUENCE ANALYSIS ---")
@@ -95,3 +95,86 @@ df_influence = df_influence.sort_values(by='Max Internal Gap (Percentage Points)
 
 print(df_influence.to_string(index=False))
 print("\n" + "="*70 + "\n")
+
+# =====================================================================
+#  MULTIVARIATE MULTIPLE REGRESSION ANALYSIS
+# =====================================================================
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+
+print("=====================================================================")
+print("--- MULTIVARIATE MULTIPLE REGRESSION ANALYSIS ---")
+print("=====================================================================")
+print("Modeling multiple dependent satisfaction brackets simultaneously.")
+print("Reference category dropped to avoid perfect collinearity: Bracket '7'\n")
+
+# Recreating the source data directly to prevent empty variable inheritance
+df_sat_raw = df[df['Wellbeing measure'] == 'Overall life satisfaction']
+df_reg_source = df_sat_raw[df_sat_raw['Wellbeing measure category'] != 'Mean rating'].dropna(subset=['Estimate(percent)'])
+
+# 1. Prepare data for the multivariate regression framework
+df_reg_prep = df_reg_source.pivot(
+    index=['Demographic', 'Demographic category', 'Year'],
+    columns='Wellbeing measure category',
+    values='Estimate(percent)'
+).reset_index()
+
+# Clean up column names to avoid syntax errors in formulas (e.g., '0 to 6' -> 'bracket_0_to_6')
+df_reg_prep.columns.name = None
+df_reg_prep = df_reg_prep.rename(columns={
+    '0 to 6': 'bracket_0_to_6',
+    '7': 'bracket_7',
+    '8': 'bracket_8',
+    '9': 'bracket_9',
+    '10': 'bracket_10'
+})
+
+# Standardize column types for string manipulation in statsmodels formulas
+df_reg_prep['Demographic'] = df_reg_prep['Demographic'].astype(str)
+df_reg_prep['Year'] = df_reg_prep['Year'].astype(int)
+
+# Filter out baseline control row
+df_reg_analysis = df_reg_prep[df_reg_prep['Demographic'] != 'Total population'].copy()
+
+# Fill individual missing metric cells with 0 to maintain regression integrity
+dependent_brackets = ['bracket_0_to_6', 'bracket_8', 'bracket_9', 'bracket_10']
+df_reg_analysis[dependent_brackets] = df_reg_analysis[dependent_brackets].fillna(0)
+
+# 3. Fit a separate Ordinary Least Squares (OLS) regression for each target equation
+# Using Demographic and Year as independent variables (X)
+regression_results = {}
+
+for bracket in dependent_brackets:
+    # Formula uses C() to automatically convert categorical dimensions into dummy variables
+    formula = f"{bracket} ~ C(Demographic) + Year"
+    model = smf.ols(formula, data=df_reg_analysis).fit()
+    regression_results[bracket] = model
+
+# 4. Display a streamlined summary map showing coefficients and significance (p-values)
+print(f"{'Dependent Bracket':<16} | {'Predictor / Feature':<46} | {'Coef':<8} | {'p-value':<7}")
+print("-" * 88)
+
+for bracket, model in regression_results.items():
+    # Extract coefficients and p-values from the fitted statsmodels wrapper
+    params = model.params
+    pvalues = model.pvalues
+    
+    for feature in params.index:
+        # Omit print clutter from the baseline intercept constant
+        if feature == 'Intercept':
+            continue
+            
+        coef_val = params[feature]
+        p_val = pvalues[feature]
+        
+        # Clean up the output feature name labels for enhanced scannability
+        clean_feature = feature.replace("C(Demographic)[T.", "").replace("]", "")
+        
+        # Highlight significant parameters running with a alpha threshold under 5%
+        sig_marker = "*" if p_val < 0.05 else " "
+        
+        print(f"{bracket:<16} | {clean_feature:<46} | {coef_val:>7.3f} | {p_val:>6.4f} {sig_marker}")
+    print("-" * 88)
+
+print("\n* Standard significance flag applied for features maintaining a p-value less than 0.05.")
+print("=====================================================================\n")
